@@ -1,2 +1,1 @@
-# readsw
-Auto read status whatsapp
+# sedang di uji
