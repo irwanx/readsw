@@ -55,7 +55,7 @@ Forwarded Story| OK |
 ```bash
 > let to = ''
 ```
-In line 9 change ' ' to whatsapp id
+In line 9 change ' ' to whatsapp jid
 
 Example
 ```bash
