@@ -18,8 +18,9 @@
 [![forthebadge](https://forthebadge.com/images/badges/made-with-javascript.svg)](https://forthebadge.com)
 
 
-[![NodeJs](https://img.shields.io/badge/nodejs-v16.17.0-yellow)](https://go.dev/)
-[![UBUNTU](https://img.shields.io/badge/ubuntu-v20.04-orange)](https://releases.ubuntu.com/impish/)
+[![NodeJs](https://img.shields.io/badge/nodejs-v16.17.0-yellow)](https://nodejs.org/en/download)
+[![Git](https://img.shields.io/badge/Git-v2.37.3-orange)](https://git-scm.com/downloads)
+[![UBUNTU](https://img.shields.io/badge/ubuntu-v20.04-blue)](https://releases.ubuntu.com/impish/)
 [![Source](https://img.shields.io/badge/-BochilGaming-black?style=flat&logo=github&logoColor=white&link=https://github.com/BochilGaming/)](https://github.com/BochilGaming)
 [![WhatsApp](https://img.shields.io/badge/-WhatsApp-green?style=flat&logo=whatsapp&logoColor=white&link=https://wa.me/628882611841/)](https://wa.me/628882611841)
 > **Warning**: This project support for linux and windows!!
