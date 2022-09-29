@@ -34,7 +34,7 @@
 ```
 # Install & Run
 ```bash
-> git clone
+> git clone https://github.com/irwanx/readsw.git
 ```
 ```bash
 > cd readsw
