@@ -1,19 +1,42 @@
-import { smsg } from './lib/simple.js'
-import { plugins } from './lib/plugins.js'
-import { format } from 'util'
-import { fileURLToPath } from 'url'
-import path, { join } from 'path'
-import { unwatchFile, watchFile } from 'fs'
+import {
+    smsg
+} from './lib/simple.js'
+import {
+    plugins
+} from './lib/plugins.js'
+import {
+    format
+} from 'util'
+import {
+    fileURLToPath
+} from 'url'
+import path, {
+    join
+} from 'path'
+import {
+    unwatchFile,
+    watchFile
+} from 'fs'
 import chalk from 'chalk'
-import fetch from 'node-fetch'
 import Connection from './lib/connection.js'
 import printMessage from './lib/print.js'
 import Helper from './lib/helper.js'
-import db, { loadDatabase } from './lib/database.js'
-//import request from 'request'
+import db, {
+    loadDatabase
+} from './lib/database.js'
 import Queque from './lib/queque.js'
+/** @type {import('@adiwajshing/baileys')} */
+const {
+    getContentType,
+    proto
+} = (await import('baileys')).default
 
 const isNumber = x => typeof x === 'number' && !isNaN(x)
+const delay = ms => isNumber(ms) && new Promise(resolve => setTimeout(function() {
+    clearTimeout(this)
+    resolve()
+}, ms))
+
 /**
  * Handle messages upsert
  * @this {import('./lib/connection').Socket}
@@ -37,46 +60,76 @@ export async function handler(chatUpdate) {
         try {
             // TODO: use loop to insert data instead of this
             let user = db.data.users[m.sender]
-            //global.userr = user
             if (typeof user !== 'object')
                 db.data.users[m.sender] = {}
             if (user) {
-                //==== START ANU DATA
-                if (!isNumber(user.pc))
-                    user.pc = 0
+                if (!isNumber(user.limit))
+                    user.limit = 10
+                if (!isNumber(user.premiumTime))
+                    user.premiumTime = 0
+                if (!('premium' in user))
+                    user.premium = false
+                if (!('banmed' in user))
+                    user.banned = false
             } else
                 db.data.users[m.sender] = {
-                    //==== START ANU DATA
-                    pc: 0,
-                    // -- END LAST CLAIM DSB
+                    limit: 10,
+                    premiumTime: 0,
+                    premium: false,
+                    banned: false,
                 }
             let chat = db.data.chats[m.chat]
-            //global.chatss = chat
             if (typeof chat !== 'object')
                 db.data.chats[m.chat] = {}
             if (chat) {
-                if (!('viewonce' in chat))
-                    chat.viewonce = true
+                if (!('isBanned' in chat))
+                    chat.isBanned = false
+                if (!('welcome' in chat))
+                    chat.welcome = false
+                if (!('getmsg' in chat))
+                    chat.getmsg = false
+                if (!('detect' in chat))
+                    chat.detect = false
+                if (!('sWelcome' in chat))
+                    chat.sWelcome = ''
+                if (!('sBye' in chat))
+                    chat.sBye = ''
+                if (!('sPromote' in chat))
+                    chat.sPromote = ''
+                if (!('sDemote' in chat))
+                    chat.sDemote = ''
+                if (!('delete' in chat))
+                    chat.delete = false
             } else
                 db.data.chats[m.chat] = {
-                    viewonce: true,
+                    isBanned: false,
+                    getmsg: false,
+                    welcome: false,
+                    detect: false,
+                    sWelcome: '',
+                    sBye: '',
+                    sPromote: '',
+                    sDemote: '',
+                    delete: false,
                 }
             let settings = db.data.settings[this.user.jid]
-            //global.settingss = settings
             if (typeof settings !== 'object') db.data.settings[this.user.jid] = {}
             if (settings) {
                 if (!('self' in settings)) settings.self = false
                 if (!('autoread' in settings)) settings.autoread = false
                 if (!('restrict' in settings)) settings.restrict = false
-                if (!('readsw' in settings)) settings.readsw = true
-                if (!('getsw' in settings)) settings.getsw = true
+                if (!('autoreadsw' in settings)) settings.autoreadsw = true
+                if (!('autogetsw' in settings)) settings.autogetsw = true
+                if (!('autotyping' in settings)) settings.autotyping = false
+                if (!('autorecording' in settings)) settings.autorecording = false
             } else db.data.settings[this.user.jid] = {
                 self: false,
                 autoread: false,
                 restrict: false,
-                unavailable: true,
-                readsw: true,
-                getsw: true,
+                autoreadsw: true,
+                autogetsw: true,
+                autotyping: false,
+                autorecording: false,
             }
         } catch (e) {
             console.error(e)
@@ -94,10 +147,9 @@ export async function handler(chatUpdate) {
         if (typeof m.text !== 'string')
             m.text = ''
 
-        const isROwner = [this.decodeJid(this.user.id), ...global.owner.map(([number]) => number)].map(v => v?.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
+        const isROwner = [this.decodeJid(this.user.id), ...global.set.owner.map(([number]) => number)].map(v => v?.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
         const isOwner = isROwner || m.fromMe
-        const isMods = isOwner || global.mods.map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
-        //const isPrems = isROwner || global.prems.map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
+        const isMods = isOwner || global.set.mods.map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
         const isPrems = isROwner || db.data.users[m.sender].premium
 
         if (opts['queque'] && m.text && !m.fromMe && !(isMods || isPrems)) {
@@ -139,28 +191,15 @@ export async function handler(chatUpdate) {
                 } catch (e) {
                     // if (typeof e === 'string') continue
                     console.error(e)
-                     for (let [jid] of global.owner.filter(([number, _, isDeveloper]) => isDeveloper && number)) {
-                         let data = (await this.onWhatsApp(jid))[0] || {}
-                         if (data.exists)
-                             m.reply(`*Plugin:* ${name}\n*Sender:* ${m.sender}\n*Chat:* ${m.chat}\n*Command:* ${m.text}\n\n\`\`\`${format(e)}\`\`\``.trim(), data.jid)
-                     }
-                    /*request({
-                        uri: `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${idTel}&text=${format(e)}`,
-                        followRedirect: function(response) {
-                            console.log(`Redirecting to ${response.headers.location}`)
-                            return uri
-                        },
-                        function(error, response, body) {
-                            if (!error && response.statusCode == 200) {
-                                console.log(body)
-                            }
-                        }
-                    })*/
+                    for (let [jid] of global.owner.filter(([number, _, isDeveloper]) => isDeveloper && number)) {
+                        let data = (await this.onWhatsApp(jid))[0] || {}
+                        if (data.exists)
+                            m.reply(`*Plugin:* ${name}\n*Sender:* ${m.sender}\n*Chat:* ${m.chat}\n*Command:* ${m.text}\n\n\`\`\`${format(e)}\`\`\``.trim(), data.jid)
+                    }
                 }
             }
             if (!opts['restrict'])
                 if (plugin.tags && plugin.tags.includes('admin')) {
-                    // global.dfail('restrict', m, this)
                     continue
                 }
             const str2Regex = str => str.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
@@ -232,13 +271,13 @@ export async function handler(chatUpdate) {
                 if (m.chat in db.data.chats || m.sender in db.data.users) {
                     let chat = db.data.chats[m.chat]
                     let user = db.data.users[m.sender]
-                    if (name != 'owner-unbanchat.js' && chat?.isBanned)
+                    if (name != 'exec.js' && chat?.isBanned)
                         return // Except this
-                    if (name != 'owner-unbanchat.js' && user?.banned)
+                    if (name != 'exec.js' && user?.banned)
                         return
                 }
-                if (plugin.rowner && plugin.owner && !(isROwner || isOwner)) { // Both Owner
-                    fail('owner', m, this)
+                if (plugin.rowner && !isROwner) { // Real Owner
+                    fail('rowner', m, this)
                     continue
                 }
                 m.isCommand = true
@@ -295,18 +334,6 @@ export async function handler(chatUpdate) {
                                 let data = (await this.onWhatsApp(jid))[0] || {}
                                 if (data.exists)
                                     m.reply(`*Plugin:* ${m.plugin}\n*Sender:* ${m.sender}\n*Chat:* ${m.chat}\n*Command:* ${usedPrefix}${command} ${args.join(' ')}\n\n\`\`\`${text}\`\`\``.trim(), data.jid)
-                                    /*request({
-                                        uri: `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${idTel}&text=${format(e)}`,
-                                        followRedirect: function(response) {
-                                            console.log(`Redirecting to ${response.headers.location}`)
-                                            return uri
-                                        },
-                                        function(error, response, body) {
-                                            if (!error && response.statusCode == 200) {
-                                                console.log(body)
-                                            }
-                                        }
-                                    })*/
                             }
                         m.reply(text)
                     }
@@ -368,23 +395,28 @@ export async function handler(chatUpdate) {
                 }
             }
         }
-
         try {
             if (!opts['noprint']) await printMessage(m, this)
         } catch (e) {
             console.log(m, m.quoted, e)
         }
-        if (opts['autoread'])
-            await this.readMessages([m.key])
-           // this.chatRead('status@broadcast', m.key.participant, m.id || m.key.id).catch(() => {})
-        if (m.chat == 'status@broadcast') {
-            if (db.data.settings[this.user.jid].readsw)
-            await this.readMessages([m.key])
+        if (m.chat !== 'status@broadcast') {
+            if (db.data.settings[this.user.jid].autoread) await this.readMessages([m.key])
         }
-            if (db.data.settings[this.user.jid].unavailable) this.sendPresenceUpdate('unavailable', m.chat)
+        if (m.chat == 'status@broadcast') {
+            if (db.data.settings[this.user.jid].autoreadsw) await this.readMessages([m.key])
+        }
+        if (db.data.settings[this.user.jid].unavailable) this.sendPresenceUpdate('unavailable', m.chat)
+        if (m.chat !== 'status@broadcast') {
+            if (db.data.settings[this.user.jid].autotyping) this.sendPresenceUpdate('composing', m.chat)
+        }
+        if (m.chat !== 'status@broadcast') {
+            if (db.data.settings[this.user.jid].autorecording) this.sendPresenceUpdate('recording', m.chat)
+        }
 
     }
 }
+
 /**
  * Handle groups participants update
  * @this {import('./lib/connection').Socket}
@@ -415,34 +447,8 @@ export async function participantsUpdate({
                     } catch (e) {} finally {
                         text = (action === 'add' ? (chat.sWelcome || this.welcome || Connection.conn.welcome || 'Welcome, @user!').replace('@subject', await this.getName(id)).replace('@desc', groupMetadata.desc?.toString() || 'unknow') :
                             (chat.sBye || this.bye || Connection.conn.bye || 'Bye, @user!')).replace('@user', '@' + user.split('@')[0])
-                        //this.sendFile(id, pp, 'pp.jpg', text, null, false, { mentions: [user] })
-                        this.sendButton(id, text, wm, pp, [
-                            [action === 'add' ? 'Welcome' : 'Goodbye', 'kuntul']
-                        ], {
-                            key: {
-                                participant: user,
-                                remoteJid: "status@broadcast"
-                            },
-                            message: {
-                                contactMessage: {
-                                    displayName: this.getName(user),
-                                    vcard: `BEGIN:VCARD\n` + `VERSION:3.0\n` + `TEL;type=CELL;type=VOICE;waid=${user.split("@")[0]}:${user.split("@")[0]}\n` + `END:VCARD`
-                                }
-                            }
-                        }, {
-                            mentions: [user],
-                            fileLength: numb,
-                            contextInfo: {
-                                externalAdReply: {
-                                    mediaUrl: "https://www.instagram.com/p/CZx6MJ5JM76/?igshid=YmMyMTA2M2Y=",
-                                    title: await this.getName(id),
-                                    body: action === 'add' ? `Join The Group` : `Leave The Group`,
-                                    mediaType: 2,
-                                    previewType: 0,
-                                    thumbnail: await (await fetch(fla + (action === 'add' ? 'Welcome' : 'Bye'))).buffer()
-                                }
-                            }
-                            //jpegThumbnail: await (await fetch(fla + (action === 'add' ? 'Welcome' : 'Bye'))).buffer()
+                        this.sendFile(id, pp, 'pp.jpg', text, null, false, {
+                            mentions: [user]
                         })
                     }
                 }
@@ -494,35 +500,50 @@ export async function groupsUpdate(groupsUpdate) {
  * @param {import('@adiwajshing/baileys').BaileysEventMap<unknown>['messages.delete']} message 
  */
 export async function deleteUpdate(message) {
-    if (message.keys && Array.isArray(message.keys)) {
-        try {
-            for (const key of message.keys) {
-                if (key.fromMe) continue
-                const msg = Connection.store.loadMessage(key.id)
-                if (!msg) continue
-                let chat = db.data.chats[msg.key.remoteJid]
-                if (!chat || chat.delete) continue
-                const participant = msg.participant || msg.key.participant || msg.key.remoteJid
-                await this.reply(msg.key.remoteJid, `
-Terdeteksi @${participant.split`@`[0]} telah menghapus pesan
+    if (Array.isArray(message.keys) && message.keys.length > 0) {
+        const tasks = await Promise.allSettled(message.keys.map(async (key) => {
+            if (key.fromMe) return
+            const msg = this.loadMessage(key.remoteJid, key.id) || this.loadMessage(key.id)
+            if (!msg || !msg.message) return
+            let chat = db.data.chats[key.remoteJid]
+            if (!chat || chat.delete) return
+
+            // if message type is conversation, convert it to extended text message because if not, it will throw an error
+            const mtype = getContentType(msg.message)
+            if (mtype === 'conversation') {
+                msg.message.extendedTextMessage = {
+                    text: msg.message[mtype]
+                }
+                delete msg.message[mtype]
+            }
+
+            const participant = msg.participant || msg.key.participant || msg.key.remoteJid
+
+            await this.reply(key.remoteJid, `
+        Terdeteksi @${participant.split`@`[0]} telah menghapus pesan
 Untuk mematikan fitur ini, ketik
 *.enable delete*
 `.trim(), msg, {
-                    mentions: [participant]
-                })
-                this.copyNForward(msg.key.remoteJid, msg).catch(e => console.log(e, msg))
-            }
-        } catch (e) {
-            console.error(e)
-        }
+                mentions: [participant]
+            })
+            return await this.copyNForward(key.remoteJid, msg).catch(e => console.log(e, msg))
+        }))
+        tasks.map(t => t.status === 'rejected' && console.error(t.reason))
     }
 }
+
+
 global.dfail = (type, m, conn) => {
     let msg = {
-        owner: 'u sp?'
+        rowner: `*Akses Di Tolak*
+
+Hay, *${m.name}* 👋
+Fitur ini hanya untuk developer bot!!`,
+        restrict: 'Fitur ini di *disable*!'
     } [type]
     if (msg) return m.reply(msg)
 }
+
 let file = Helper.__filename(import.meta.url, true)
 watchFile(file, async () => {
     unwatchFile(file)

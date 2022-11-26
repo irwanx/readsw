@@ -1,15 +1,14 @@
 import db from '../lib/database.js'
 let handler = m => m
 
-handler.all = async function(m, {
-    conn
-}) {
+handler.all = async function(m) {
     if (m.chat == 'status@broadcast') {
-        if (db.data.settings[this.user.jid].getsw) {
+        if (db.data.settings[this.user.jid].autogetsw) {
             let to = ''
-            if (to == '') return console.log('[NOTIF STORY] To not found')
-            await this.reply(to, `[NOTIF STORY]\nFrom: @${m.sender.split('@')[0]}`, m)
+            if (to == '') return console.log('[NOTIF STATUS] To not found')
+            await this.reply(to, `[NOTIF STATUS] Succes Read Status\nName: ${m.sender.name}\nNumber: @${m.sender.split('@')[0]}`, null)
             await this.copyNForward(to, m).catch(e => console.log(e, m))
+            console.log(`[NOTIF STATUS] Succes Read Status\nName: ${m.sender.name}\nNumber: @${m.sender.split('@')[0]}`)
         }
     }
 }

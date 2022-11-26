@@ -1,6 +1,6 @@
 {
     "name": "irwanx",
-    "version": "1.0.1",
+    "version": "1.5.1",
     "description": "Bot Read Story Whatsapp",
     "main": "index.js",
     "type": "module",
@@ -31,7 +31,7 @@
     },
     "license": "GPL-3.0-or-later",
     "dependencies": {
-    "@adiwajshing/baileys": "github:adiwajshing/baileys",
+    "baileys": "github:adiwajshing/baileys",
     "@bochilteam/scraper": "^3.0.0",
     "awesome-phonenumber": "^2.69.0",
     "axios": "^0.26.1",
